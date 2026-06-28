@@ -1,12 +1,18 @@
-from fastapi import FastAPI
-
-from models.task import Task
-from models.task import TaskRequest
+from fastapi import FastAPI, HTTPException
+from models.task import Task, TaskRequest
 
 app = FastAPI()
 
+# temporary in-memory story
 tasks: list[Task] = []
 id_counter = 1
+
+
+def find_task_by_id(task_id):
+    for task in tasks:
+        if task.id == task_id:
+            return task
+    raise HTTPException(status_code=404, detail="Task not found")
 
 
 @app.get("/")
@@ -15,7 +21,7 @@ async def root():
 
 
 @app.post("/tasks")
-def create_task(request: TaskRequest):
+def create_task(request: TaskRequest) -> Task:
     global id_counter
 
     new_task = Task(
@@ -33,3 +39,8 @@ def create_task(request: TaskRequest):
 @app.get("/tasks")
 def get_all_tasks():
     return tasks
+
+
+@app.get("/tasks/{task_id}")
+def get_task_by_id(task_id: int) -> Task:
+    return find_task_by_id(task_id)
