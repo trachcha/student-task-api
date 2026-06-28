@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from models.task import Task, TaskRequest
+from models.task import Task, TaskRequest, TaskUpdate
 
 app = FastAPI()
 
@@ -8,7 +8,7 @@ tasks: list[Task] = []
 id_counter = 1
 
 
-def find_task_by_id(task_id):
+def find_task_by_id(task_id: int) -> Task:
     for task in tasks:
         if task.id == task_id:
             return task
@@ -44,3 +44,12 @@ def get_all_tasks():
 @app.get("/tasks/{task_id}")
 def get_task_by_id(task_id: int) -> Task:
     return find_task_by_id(task_id)
+
+
+@app.put("/tasks/{task_id}")
+def update_task_by_id(task_id: int, update: TaskUpdate):
+    updated_task = find_task_by_id(task_id)
+    updated_task.title = update.title
+    updated_task.completed = update.completed
+
+    return updated_task
