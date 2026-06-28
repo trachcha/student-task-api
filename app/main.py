@@ -1,18 +1,13 @@
-from fastapi import FastAPI, HTTPException
-from models.task import Task, TaskRequest, TaskUpdate
-
+from fastapi import FastAPI
+from app.models.task import TaskRequest, TaskUpdate
+from app.services.task_service import (
+    create_task,
+    get_all_tasks,
+    find_task_by_id,
+    update_task_by_id,
+    delete_task_by_id
+)
 app = FastAPI()
-
-# temporary in-memory story
-tasks: list[Task] = []
-id_counter = 1
-
-
-def find_task_by_id(task_id: int) -> Task:
-    for task in tasks:
-        if task.id == task_id:
-            return task
-    raise HTTPException(status_code=404, detail="Task not found")
 
 
 @app.get("/")
@@ -21,43 +16,25 @@ async def root():
 
 
 @app.post("/tasks")
-def create_task(request: TaskRequest) -> Task:
-    global id_counter
-
-    new_task = Task(
-        id=id_counter,
-        title=request.title
-    )
-
-    id_counter += 1
-
-    tasks.append(new_task)
-
-    return new_task
+def create(request: TaskRequest):
+    return create_task(request)
 
 
 @app.get("/tasks")
-def get_all_tasks():
-    return tasks
+def read_all():
+    return get_all_tasks()
 
 
 @app.get("/tasks/{task_id}")
-def get_task_by_id(task_id: int) -> Task:
+def read_one(task_id: int):
     return find_task_by_id(task_id)
 
 
 @app.put("/tasks/{task_id}")
-def update_task_by_id(task_id: int, update: TaskUpdate):
-    updated_task = find_task_by_id(task_id)
-    updated_task.title = update.title
-    updated_task.completed = update.completed
-
-    return updated_task
+def update(task_id: int, request: TaskUpdate):
+    return update_task_by_id(task_id, request)
 
 
 @app.delete("/tasks/{task_id}")
-def delete_task_by_id(task_id: int):
-    deleted_task = find_task_by_id(task_id)
-    tasks.remove(deleted_task)
-
-    return {"message": "Task deleted successfully"}
+def delete(task_id: int):
+    return delete_task_by_id(task_id)
