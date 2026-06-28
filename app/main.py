@@ -17,7 +17,7 @@ def find_task_by_id(task_id: int) -> Task:
 
 @app.get("/")
 async def root():
-    return {"message": "StudentTask API is running."}
+    return {"message": "StudentTask API is running"}
 
 
 @app.post("/tasks")
@@ -53,3 +53,11 @@ def update_task_by_id(task_id: int, update: TaskUpdate):
     updated_task.completed = update.completed
 
     return updated_task
+
+
+@app.delete("/tasks/{task_id}")
+def delete_task_by_id(task_id: int):
+    deleted_task = find_task_by_id(task_id)
+    tasks.remove(deleted_task)
+
+    return {"message": "Task deleted successfully"}
