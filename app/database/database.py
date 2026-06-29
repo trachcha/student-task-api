@@ -1,24 +1,44 @@
 import os
-import sqlite3
 
-DEFAULT_DATABASE_NAME = "tasks.db"
+from dotenv import load_dotenv
+from psycopg_pool import ConnectionPool
+
+load_dotenv()
+
+DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/student_tasks"
+
+_pool: ConnectionPool | None = None
 
 
-def get_database_name() -> str:
-    return os.getenv("DATABASE_NAME", DEFAULT_DATABASE_NAME)
+def get_database_url() -> str:
+    return os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 
-def get_connection() -> sqlite3.Connection:
-    return sqlite3.connect(get_database_name())
+def open_pool() -> ConnectionPool:
+    global _pool
+    if _pool is None:
+        _pool = ConnectionPool(conninfo=get_database_url(), open=True)
+    return _pool
+
+
+def close_pool() -> None:
+    global _pool
+    if _pool is not None:
+        _pool.close()
+        _pool = None
+
+
+def get_pool() -> ConnectionPool:
+    if _pool is None:
+        return open_pool()
+    return _pool
 
 
 def initialize_db() -> None:
-    connection = get_connection()
-
-    connection.execute("CREATE TABLE IF NOT EXISTS tasks ("
-                       "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                       "title TEXT NOT NULL,"
-                       "completed BOOLEAN NOT NULL DEFAULT 0);")
-
-    connection.commit()
-    connection.close()
+    with get_pool().connection() as connection:
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS tasks ("
+            "id SERIAL PRIMARY KEY,"
+            "title TEXT NOT NULL,"
+            "completed BOOLEAN NOT NULL DEFAULT FALSE)"
+        )

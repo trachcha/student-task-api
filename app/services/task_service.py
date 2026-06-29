@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from app.database.database import get_connection
+from app.database.database import get_pool
 from app.models.task import Task, TaskRequest, TaskUpdate
 
 
@@ -9,41 +9,31 @@ def _row_to_task(row: tuple) -> Task:
 
 
 def create_task(request: TaskRequest) -> Task:
-    connection = get_connection()
-    cursor = connection.cursor()
+    with get_pool().connection() as connection:
+        row = connection.execute(
+            "INSERT INTO tasks (title, completed) VALUES (%s, %s) "
+            "RETURNING id, title, completed",
+            (request.title, False),
+        ).fetchone()
 
-    insert_task_sql = "INSERT INTO tasks (title, completed) VALUES (?, ?)"
-    cursor.execute(insert_task_sql, (request.title, False))
-
-    task_id = cursor.lastrowid
-
-    connection.commit()
-    connection.close()
-
-    return Task(id=task_id, title=request.title, completed=False)
+    return _row_to_task(row)
 
 
 def get_all_tasks() -> list[Task]:
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    cursor.execute("SELECT id, title, completed FROM tasks")
-    rows = cursor.fetchall()
-    connection.close()
+    with get_pool().connection() as connection:
+        rows = connection.execute(
+            "SELECT id, title, completed FROM tasks ORDER BY id"
+        ).fetchall()
 
     return [_row_to_task(row) for row in rows]
 
 
 def find_task_by_id(task_id: int) -> Task:
-    connection = get_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        "SELECT id, title, completed FROM tasks WHERE id = ?",
-        (task_id,),
-    )
-    row = cursor.fetchone()
-    connection.close()
+    with get_pool().connection() as connection:
+        row = connection.execute(
+            "SELECT id, title, completed FROM tasks WHERE id = %s",
+            (task_id,),
+        ).fetchone()
 
     if row is None:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -52,35 +42,27 @@ def find_task_by_id(task_id: int) -> Task:
 
 
 def update_task_by_id(task_id: int, update: TaskUpdate) -> Task:
-    connection = get_connection()
-    cursor = connection.cursor()
+    with get_pool().connection() as connection:
+        row = connection.execute(
+            "UPDATE tasks SET title = %s, completed = %s WHERE id = %s "
+            "RETURNING id, title, completed",
+            (update.title, update.completed, task_id),
+        ).fetchone()
 
-    cursor.execute(
-        "UPDATE tasks SET title = ?, completed = ? WHERE id = ?",
-        (update.title, update.completed, task_id),
-    )
-
-    if cursor.rowcount == 0:
-        connection.close()
+    if row is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    connection.commit()
-    connection.close()
-
-    return Task(id=task_id, title=update.title, completed=update.completed)
+    return _row_to_task(row)
 
 
 def delete_task_by_id(task_id: int) -> dict:
-    connection = get_connection()
-    cursor = connection.cursor()
+    with get_pool().connection() as connection:
+        cursor = connection.execute(
+            "DELETE FROM tasks WHERE id = %s",
+            (task_id,),
+        )
 
-    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
-
-    if cursor.rowcount == 0:
-        connection.close()
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    connection.commit()
-    connection.close()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Task not found")
 
     return {"message": "Task deleted successfully"}

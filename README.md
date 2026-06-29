@@ -1,19 +1,21 @@
 # Student Task API
 
-A simple task-management REST API built with FastAPI and SQLite, created to learn backend fundamentals and professional software engineering practices.
+A simple task-management REST API built with FastAPI and PostgreSQL, created to learn backend fundamentals and professional software engineering practices.
 
-The project follows a layered architecture where HTTP routes delegate to a service layer, which is the single point of access to the SQLite database.
+The project follows a layered architecture where HTTP routes delegate to a service layer, which is the single point of access to the database.
 
 ```
-Routes (main.py) -> Services (task_service.py) -> SQLite (tasks.db)
+Routes (task_routes.py) -> Services (task_service.py) -> PostgreSQL (psycopg pool)
 ```
 
 ## Tech Stack
 
 - Python 3.12
 - FastAPI
-- SQLite (via the standard library `sqlite3`, raw SQL)
+- PostgreSQL (raw SQL via `psycopg` 3 with a connection pool)
+- Docker / Docker Compose (local database)
 - Uvicorn (ASGI server)
+- pytest (automated tests)
 
 ## Project Structure
 
@@ -21,7 +23,7 @@ Routes (main.py) -> Services (task_service.py) -> SQLite (tasks.db)
 student-task-api/
 ├── app/
 │   ├── database/
-│   │   └── database.py        # Connection + schema initialization
+│   │   └── database.py        # Connection pool + schema initialization
 │   ├── models/
 │   │   └── task.py            # Pydantic request/response models
 │   ├── routes/
@@ -29,9 +31,13 @@ student-task-api/
 │   ├── services/
 │   │   └── task_service.py    # Business logic + SQL queries
 │   └── main.py                # FastAPI app: wiring and router registration
+├── db/
+│   └── init/                  # SQL run on first DB container start
 ├── tests/
 │   ├── conftest.py            # Shared fixtures (isolated test database)
 │   └── test_tasks.py          # API endpoint tests
+├── docker-compose.yml         # Local PostgreSQL service
+├── .env.example
 ├── pytest.ini
 ├── requirements.txt
 └── README.md
@@ -42,6 +48,7 @@ student-task-api/
 ### Prerequisites
 
 - Python 3.12+
+- Docker and Docker Compose (for the local PostgreSQL database)
 
 ### Setup
 
@@ -56,6 +63,29 @@ source venv/bin/activate        # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Copy the example environment file
+cp .env.example .env
+```
+
+### Start PostgreSQL
+
+The project ships with a Docker Compose file that runs PostgreSQL 16 and, on
+first start, creates a separate database used by the test suite.
+
+```bash
+docker compose up -d
+```
+
+This exposes PostgreSQL on `localhost:5432` with two databases:
+
+- `student_tasks` — used by the application
+- `student_tasks_test` — used by the automated tests
+
+To stop it (data is preserved in a named volume):
+
+```bash
+docker compose down
 ```
 
 ### Running the API
@@ -64,21 +94,18 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://127.0.0.1:8000`.
-
-The SQLite database file (`tasks.db`) is created automatically on startup if it does not already exist.
+The API will be available at `http://127.0.0.1:8000`. The `tasks` table is created
+automatically on startup if it does not already exist.
 
 ### Configuration
 
-| Variable        | Default    | Description                              |
-|-----------------|------------|------------------------------------------|
-| `DATABASE_NAME` | `tasks.db` | Path to the SQLite database file to use. |
+Configuration is read from environment variables (a local `.env` file is loaded
+automatically). See [.env.example](.env.example).
 
-For example, to run against a separate database file:
-
-```bash
-DATABASE_NAME=dev.db uvicorn app.main:app --reload
-```
+| Variable            | Default                                                       | Description                                       |
+|---------------------|---------------------------------------------------------------|---------------------------------------------------|
+| `DATABASE_URL`      | `postgresql://postgres:postgres@localhost:5432/student_tasks` | Connection string for the application database.   |
+| `TEST_DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/student_tasks_test` | Connection string used by the test suite.    |
 
 ### Interactive Documentation
 
@@ -132,8 +159,11 @@ curl -X DELETE http://127.0.0.1:8000/tasks/1
 
 ## Testing
 
-The test suite uses `pytest` with FastAPI's `TestClient`. Each test runs against
-an isolated temporary SQLite database, so tests never touch your real `tasks.db`.
+The test suite uses `pytest` with FastAPI's `TestClient`. Tests run against the
+dedicated `student_tasks_test` database and truncate the `tasks` table before each
+test, so they are isolated and never touch development data.
+
+Make sure PostgreSQL is running (`docker compose up -d`), then:
 
 ```bash
 # Run the full suite
@@ -151,7 +181,7 @@ pytest tests/test_tasks.py::test_create_task
 - [x] SQLite-backed persistence with raw SQL
 - [x] Extract routes into dedicated route modules
 - [x] Automated test suite with pytest
-- [ ] Migrate to PostgreSQL with environment-based configuration
+- [x] Migrate to PostgreSQL with environment-based configuration
 - [ ] Introduce SQLAlchemy ORM and migrations
 - [ ] Containerization and cloud deployment
 
