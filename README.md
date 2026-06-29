@@ -29,6 +29,10 @@ student-task-api/
 │   ├── services/
 │   │   └── task_service.py    # Business logic + SQL queries
 │   └── main.py                # FastAPI app: wiring and router registration
+├── tests/
+│   ├── conftest.py            # Shared fixtures (isolated test database)
+│   └── test_tasks.py          # API endpoint tests
+├── pytest.ini
 ├── requirements.txt
 └── README.md
 ```
@@ -63,6 +67,18 @@ uvicorn app.main:app --reload
 The API will be available at `http://127.0.0.1:8000`.
 
 The SQLite database file (`tasks.db`) is created automatically on startup if it does not already exist.
+
+### Configuration
+
+| Variable        | Default    | Description                              |
+|-----------------|------------|------------------------------------------|
+| `DATABASE_NAME` | `tasks.db` | Path to the SQLite database file to use. |
+
+For example, to run against a separate database file:
+
+```bash
+DATABASE_NAME=dev.db uvicorn app.main:app --reload
+```
 
 ### Interactive Documentation
 
@@ -114,12 +130,27 @@ curl -X PUT http://127.0.0.1:8000/tasks/1 \
 curl -X DELETE http://127.0.0.1:8000/tasks/1
 ```
 
+## Testing
+
+The test suite uses `pytest` with FastAPI's `TestClient`. Each test runs against
+an isolated temporary SQLite database, so tests never touch your real `tasks.db`.
+
+```bash
+# Run the full suite
+pytest
+
+# Run with extra detail / a specific test
+pytest -v
+pytest tests/test_tasks.py::test_create_task
+```
+
 ## Roadmap
 
 - [x] CRUD operations with in-memory storage
 - [x] Service layer architecture
 - [x] SQLite-backed persistence with raw SQL
-- [ ] Extract routes into dedicated route modules
+- [x] Extract routes into dedicated route modules
+- [x] Automated test suite with pytest
 - [ ] Migrate to PostgreSQL with environment-based configuration
 - [ ] Introduce SQLAlchemy ORM and migrations
 - [ ] Containerization and cloud deployment

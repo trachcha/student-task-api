@@ -1,14 +1,18 @@
+import os
 import sqlite3
 
-DATABASE_NAME = "tasks.db"
+DEFAULT_DATABASE_NAME = "tasks.db"
 
 
-def get_connection():
-    connection = sqlite3.connect(DATABASE_NAME)
-    return connection
+def get_database_name() -> str:
+    return os.getenv("DATABASE_NAME", DEFAULT_DATABASE_NAME)
 
 
-def initialize_db():
+def get_connection() -> sqlite3.Connection:
+    return sqlite3.connect(get_database_name())
+
+
+def initialize_db() -> None:
     connection = get_connection()
 
     connection.execute("CREATE TABLE IF NOT EXISTS tasks ("
