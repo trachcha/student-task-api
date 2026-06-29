@@ -24,10 +24,11 @@ student-task-api/
 │   │   └── database.py        # Connection + schema initialization
 │   ├── models/
 │   │   └── task.py            # Pydantic request/response models
-│   ├── routes/               # (reserved for future route modules)
+│   ├── routes/
+│   │   └── task_routes.py     # APIRouter with task endpoints
 │   ├── services/
 │   │   └── task_service.py    # Business logic + SQL queries
-│   └── main.py                # FastAPI app and route definitions
+│   └── main.py                # FastAPI app: wiring and router registration
 ├── requirements.txt
 └── README.md
 ```
@@ -75,7 +76,7 @@ FastAPI generates interactive API docs automatically:
 | Method | Path               | Description            | Request Body                         | Success Response          |
 |--------|--------------------|------------------------|--------------------------------------|---------------------------|
 | GET    | `/`                | Health check           | -                                    | `200` status message      |
-| POST   | `/tasks`           | Create a task          | `{ "title": "string" }`              | `200` created task        |
+| POST   | `/tasks`           | Create a task          | `{ "title": "string" }`              | `201` created task        |
 | GET    | `/tasks`           | List all tasks         | -                                    | `200` array of tasks      |
 | GET    | `/tasks/{task_id}` | Get a single task      | -                                    | `200` task / `404`        |
 | PUT    | `/tasks/{task_id}` | Update a task          | `{ "title": "string", "completed": bool }` | `200` updated task / `404` |
