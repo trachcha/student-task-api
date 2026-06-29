@@ -5,14 +5,15 @@ A simple task-management REST API built with FastAPI and PostgreSQL, created to 
 The project follows a layered architecture where HTTP routes delegate to a service layer, which is the single point of access to the database.
 
 ```
-Routes (task_routes.py) -> Services (task_service.py) -> PostgreSQL (psycopg pool)
+Routes (task_routes.py) -> Services (task_service.py) -> SQLAlchemy Session -> PostgreSQL
 ```
 
 ## Tech Stack
 
 - Python 3.12
 - FastAPI
-- PostgreSQL (raw SQL via `psycopg` 3 with a connection pool)
+- SQLAlchemy 2.0 (typed ORM) on PostgreSQL via the `postgresql+psycopg://` (psycopg 3) dialect
+- Alembic (database migrations)
 - Docker / Docker Compose (local database)
 - Uvicorn (ASGI server)
 - pytest (automated tests)
@@ -23,14 +24,20 @@ Routes (task_routes.py) -> Services (task_service.py) -> PostgreSQL (psycopg poo
 student-task-api/
 ├── app/
 │   ├── database/
-│   │   └── database.py        # Connection pool + schema initialization
+│   │   └── database.py        # Engine, session factory, Base, get_session
 │   ├── models/
-│   │   └── task.py            # Pydantic request/response models
+│   │   └── task.py            # SQLAlchemy ORM models
+│   ├── schemas/
+│   │   └── task.py            # Pydantic request/response schemas
 │   ├── routes/
 │   │   └── task_routes.py     # APIRouter with task endpoints
 │   ├── services/
-│   │   └── task_service.py    # Business logic + SQL queries
+│   │   └── task_service.py    # Business logic (ORM session operations)
 │   └── main.py                # FastAPI app: wiring and router registration
+├── alembic/
+│   ├── env.py                 # Migration environment (reads DATABASE_URL)
+│   └── versions/              # Migration scripts
+├── alembic.ini                # Alembic configuration
 ├── db/
 │   └── init/                  # SQL run on first DB container start
 ├── tests/
@@ -94,8 +101,9 @@ docker compose down
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://127.0.0.1:8000`. The `tasks` table is created
-automatically on startup if it does not already exist.
+The API will be available at `http://127.0.0.1:8000`. For local convenience the
+`tasks` table is created automatically on startup if it does not already exist;
+the canonical way to manage the schema is Alembic migrations (see below).
 
 ### Configuration
 
@@ -157,6 +165,31 @@ curl -X PUT http://127.0.0.1:8000/tasks/1 \
 curl -X DELETE http://127.0.0.1:8000/tasks/1
 ```
 
+## Database Migrations
+
+The database schema is managed with [Alembic](https://alembic.sqlalchemy.org/).
+Alembic reads the same `DATABASE_URL` as the application (normalized to the
+`postgresql+psycopg://` dialect) and uses the ORM models' metadata as the source
+of truth for autogeneration.
+
+```bash
+# Apply all migrations to bring the database up to date
+alembic upgrade head
+
+# Autogenerate a new migration after changing the ORM models
+alembic revision --autogenerate -m "describe your change"
+
+# Inspect/roll back history
+alembic current
+alembic downgrade -1
+```
+
+> If a database already contains the schema (for example from an earlier phase),
+> mark it as up to date without re-running DDL with `alembic stamp head`.
+
+The test suite does not run migrations; it builds the schema directly via
+`Base.metadata.create_all` for speed and isolation.
+
 ## Testing
 
 The test suite uses `pytest` with FastAPI's `TestClient`. Tests run against the
@@ -182,7 +215,7 @@ pytest tests/test_tasks.py::test_create_task
 - [x] Extract routes into dedicated route modules
 - [x] Automated test suite with pytest
 - [x] Migrate to PostgreSQL with environment-based configuration
-- [ ] Introduce SQLAlchemy ORM and migrations
+- [x] Introduce SQLAlchemy ORM and migrations
 - [ ] Containerization and cloud deployment
 
 ## Contributing

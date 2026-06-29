@@ -1,44 +1,55 @@
 import os
+from collections.abc import Iterator
 
 from dotenv import load_dotenv
-from psycopg_pool import ConnectionPool
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 load_dotenv()
 
 DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/student_tasks"
 
-_pool: ConnectionPool | None = None
+
+class Base(DeclarativeBase):
+    pass
 
 
 def get_database_url() -> str:
     return os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 
-def open_pool() -> ConnectionPool:
-    global _pool
-    if _pool is None:
-        _pool = ConnectionPool(conninfo=get_database_url(), open=True)
-    return _pool
+def _normalize_url(url: str) -> str:
+    """Force the psycopg 3 driver, regardless of how the URL is written."""
+    if url.startswith("postgresql+psycopg://"):
+        return url
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://") :]
+    return url
 
 
-def close_pool() -> None:
-    global _pool
-    if _pool is not None:
-        _pool.close()
-        _pool = None
+def create_db_engine():
+    return create_engine(_normalize_url(get_database_url()), future=True)
 
 
-def get_pool() -> ConnectionPool:
-    if _pool is None:
-        return open_pool()
-    return _pool
+engine = create_db_engine()
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    expire_on_commit=False,
+    class_=Session,
+)
+
+
+def get_session() -> Iterator[Session]:
+    with SessionLocal() as session:
+        yield session
 
 
 def initialize_db() -> None:
-    with get_pool().connection() as connection:
-        connection.execute(
-            "CREATE TABLE IF NOT EXISTS tasks ("
-            "id SERIAL PRIMARY KEY,"
-            "title TEXT NOT NULL,"
-            "completed BOOLEAN NOT NULL DEFAULT FALSE)"
-        )
+    """Create tables for local/dev/test convenience; production uses Alembic."""
+    from app import models  # noqa: F401  ensure models are registered on Base
+
+    Base.metadata.create_all(engine)

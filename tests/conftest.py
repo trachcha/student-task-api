@@ -20,14 +20,16 @@ def _configure_test_database() -> None:
 def client() -> Iterator[TestClient]:
     """Provide a TestClient backed by a clean test database.
 
-    Entering the TestClient context runs the app's lifespan handler, which opens
-    the connection pool and creates the schema. The ``tasks`` table is then
+    Entering the TestClient context runs the app's lifespan handler, which creates
+    the schema via ``Base.metadata.create_all``. The ``tasks`` table is then
     truncated so each test starts from an empty database with ids reset to 1.
     """
-    from app.database.database import get_pool
+    from sqlalchemy import text
+
+    from app.database.database import engine
     from app.main import app
 
     with TestClient(app) as test_client:
-        with get_pool().connection() as connection:
-            connection.execute("TRUNCATE tasks RESTART IDENTITY")
+        with engine.begin() as connection:
+            connection.execute(text("TRUNCATE tasks RESTART IDENTITY"))
         yield test_client
