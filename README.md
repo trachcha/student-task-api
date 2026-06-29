@@ -99,10 +99,11 @@ cp .env.example .env
 ### Start PostgreSQL
 
 The project ships with a Docker Compose file that runs PostgreSQL 16 and, on
-first start, creates a separate database used by the test suite.
+first start, creates a separate database used by the test suite. To run only the
+database (for native local development with uvicorn), start the `db` service:
 
 ```bash
-docker compose up -d
+docker compose up -d db
 ```
 
 This exposes PostgreSQL on `localhost:5432` with two databases:
@@ -125,6 +126,35 @@ uvicorn app.main:app --reload
 The API will be available at `http://127.0.0.1:8000`. For local convenience the
 `tasks` table is created automatically on startup if it does not already exist;
 the canonical way to manage the schema is Alembic migrations (see below).
+
+### Running with Docker (full stack)
+
+The whole stack — the API and PostgreSQL — can be built and started together,
+no local Python environment required:
+
+```bash
+docker compose up --build
+```
+
+This builds the API image from the [Dockerfile](Dockerfile), waits for the
+database to become healthy, applies Alembic migrations automatically
+(`alembic upgrade head`), and then serves the app. Once it's up:
+
+- API: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
+
+Inside Compose the API talks to the database over the Compose network, so its
+`DATABASE_URL` uses the service host `db` (e.g.
+`postgresql://postgres:postgres@db:5432/student_tasks`) rather than `localhost`.
+The default secrets in the `api` service are for local use only — override
+`SECRET_KEY` (and the database credentials) in any real deployment. See
+[.env.example](.env.example) for the full list of variables.
+
+To stop the stack (the database volume is preserved):
+
+```bash
+docker compose down
+```
 
 ### Configuration
 
@@ -354,7 +384,8 @@ pytest tests/test_tasks.py::test_create_task
 - [x] Subjects to group tasks (per-user, optional, filterable)
 - [x] Subtasks under tasks (nested, independently completable)
 - [x] Search & filtering on tasks (`completed`, `q`, combinable)
-- [ ] Containerization and cloud deployment
+- [x] Containerization (Dockerfile + Compose stack, migrations on startup)
+- [ ] Cloud deployment
 
 ## Contributing
 
