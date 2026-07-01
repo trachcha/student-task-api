@@ -144,8 +144,8 @@ def test_subtasks_require_authentication(client):
 
 
 def test_subtasks_isolated_per_user(client):
-    token_a = register_and_login(client, "alice@example.com", "password123")
-    token_b = register_and_login(client, "bob@example.com", "password123")
+    token_a = register_and_login(client, "alice", "password123")
+    token_b = register_and_login(client, "bob", "password123")
     headers_a = {"Authorization": f"Bearer {token_a}"}
     headers_b = {"Authorization": f"Bearer {token_b}"}
 
@@ -193,3 +193,48 @@ def test_deleting_task_cascades_subtasks(auth_client):
             {"tid": task["id"]},
         ).scalar()
     assert remaining == 0
+
+
+def _subtask_titles_completed(client, task_id: int) -> list[bool]:
+    return [s["completed"] for s in client.get(f"/tasks/{task_id}/subtasks").json()]
+
+
+def test_completing_task_completes_its_subtasks(auth_client):
+    task = _create_task(auth_client)
+    _create_subtask(auth_client, task["id"], "a")
+    _create_subtask(auth_client, task["id"], "b")
+
+    auth_client.put(
+        f"/tasks/{task['id']}", json={"title": task["title"], "completed": True}
+    )
+
+    assert _subtask_titles_completed(auth_client, task["id"]) == [True, True]
+
+
+def test_completing_subtask_does_not_complete_task(auth_client):
+    task = _create_task(auth_client)
+    subtask = _create_subtask(auth_client, task["id"], "a")
+
+    auth_client.put(
+        f"/tasks/{task['id']}/subtasks/{subtask['id']}",
+        json={"title": subtask["title"], "completed": True},
+    )
+
+    fetched = auth_client.get(f"/tasks/{task['id']}").json()
+    assert fetched["completed"] is False
+
+
+def test_uncompleting_task_leaves_subtasks_completed(auth_client):
+    task = _create_task(auth_client)
+    _create_subtask(auth_client, task["id"], "a")
+
+    # Complete the task (cascades to the subtask)...
+    auth_client.put(
+        f"/tasks/{task['id']}", json={"title": task["title"], "completed": True}
+    )
+    # ...then un-complete the task; the subtask stays completed.
+    auth_client.put(
+        f"/tasks/{task['id']}", json={"title": task["title"], "completed": False}
+    )
+
+    assert _subtask_titles_completed(auth_client, task["id"]) == [True]

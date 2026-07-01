@@ -54,14 +54,14 @@ def client() -> Iterator[TestClient]:
 
 def register_and_login(
     client: TestClient,
-    email: str = "user@example.com",
+    username: str = "user",
     password: str = "password123",
 ) -> str:
     """Register a user and return a bearer access token."""
-    client.post("/auth/register", json={"email": email, "password": password})
+    client.post("/auth/register", json={"username": username, "password": password})
     response = client.post(
         "/auth/login",
-        data={"username": email, "password": password},
+        data={"username": username, "password": password},
     )
     return response.json()["access_token"]
 

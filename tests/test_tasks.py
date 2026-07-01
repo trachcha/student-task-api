@@ -164,8 +164,8 @@ def test_create_task_with_unknown_subject_rejected(auth_client):
 
 
 def test_assigning_another_users_subject_rejected(client):
-    token_a = register_and_login(client, "alice@example.com", "password123")
-    token_b = register_and_login(client, "bob@example.com", "password123")
+    token_a = register_and_login(client, "alice", "password123")
+    token_b = register_and_login(client, "bob", "password123")
     headers_a = {"Authorization": f"Bearer {token_a}"}
     headers_b = {"Authorization": f"Bearer {token_b}"}
 

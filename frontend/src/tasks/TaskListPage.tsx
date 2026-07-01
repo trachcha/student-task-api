@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api } from "../api/client";
 import type { Subject, Task, TaskFilters } from "../api/types";
 import SubjectPanel from "../subjects/SubjectPanel";
@@ -15,7 +15,23 @@ export default function TaskListPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newSubjectId, setNewSubjectId] = useState<number | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [confirmingDeleteTaskId, setConfirmingDeleteTaskId] = useState<number | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
+
+  const subjectInputRef = useRef<HTMLInputElement>(null);
+  const hasSubjects = subjects.length > 0;
+  const sortedSubjects = [...subjects].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+
+  const focusSubjectInput = useCallback(() => {
+    subjectInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    subjectInputRef.current?.focus();
+  }, []);
 
   const loadSubjects = useCallback(async () => {
     setSubjects(await api.listSubjects());
@@ -65,12 +81,25 @@ export default function TaskListPage() {
   }
 
   async function handleToggle(task: Task) {
-    await api.updateTask(task.id, {
-      title: task.title,
-      completed: !task.completed,
-      subject_id: task.subject_id,
-    });
-    await loadTasks();
+    const nextCompleted = !task.completed;
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === task.id ? { ...t, completed: nextCompleted } : t,
+      ),
+    );
+    try {
+      await api.updateTask(task.id, {
+        title: task.title,
+        completed: nextCompleted,
+        subject_id: task.subject_id,
+      });
+      if (completedFilter !== "all") {
+        await loadTasks();
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update task");
+      await loadTasks();
+    }
   }
 
   async function handleSubjectChange(task: Task, subjectId: number | null) {
@@ -82,29 +111,36 @@ export default function TaskListPage() {
     await loadTasks();
   }
 
-  async function handleRename(task: Task) {
-    const title = prompt("Task title", task.title);
-    if (title === null || !title.trim() || title.trim() === task.title) {
+  function startEdit(task: Task) {
+    setEditingTaskId(task.id);
+    setEditingTitle(task.title);
+  }
+
+  function cancelEdit() {
+    setEditingTaskId(null);
+    setEditingTitle("");
+  }
+
+  async function saveEdit(task: Task) {
+    const title = editingTitle.trim();
+    if (!title || title === task.title) {
+      cancelEdit();
       return;
     }
     await api.updateTask(task.id, {
-      title: title.trim(),
+      title,
       completed: task.completed,
       subject_id: task.subject_id,
     });
+    cancelEdit();
     await loadTasks();
   }
 
   async function handleDelete(task: Task) {
-    if (!confirm(`Delete task "${task.title}"?`)) {
-      return;
-    }
     await api.deleteTask(task.id);
+    setConfirmingDeleteTaskId(null);
     await loadTasks();
   }
-
-  const subjectName = (id: number | null) =>
-    subjects.find((s) => s.id === id)?.name ?? "No subject";
 
   return (
     <div className="task-layout">
@@ -112,40 +148,50 @@ export default function TaskListPage() {
         subjects={subjects}
         selectedSubjectId={selectedSubjectId}
         onSelect={setSelectedSubjectId}
-        onChanged={() => {
+        onChanged={(createdSubjectId) => {
           loadSubjects();
           loadTasks();
+          if (createdSubjectId !== undefined) {
+            setNewSubjectId(createdSubjectId);
+          }
         }}
+        inputRef={subjectInputRef}
       />
 
       <section className="task-content">
         <form className="task-create" onSubmit={handleCreate}>
           <input
             type="text"
-            placeholder="What needs doing?"
+            placeholder="Type your task"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
           />
-          <select
-            value={newSubjectId ?? ""}
-            onChange={(e) =>
-              setNewSubjectId(e.target.value ? Number(e.target.value) : null)
-            }
-          >
-            <option value="">No subject</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
-              </option>
-            ))}
-          </select>
+          {hasSubjects ? (
+            <select
+              value={newSubjectId ?? ""}
+              onChange={(e) =>
+                setNewSubjectId(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              {sortedSubjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name}
+                </option>
+              ))}
+              <option value="">No subject</option>
+            </select>
+          ) : (
+            <button type="button" onClick={focusSubjectInput}>
+              Add subject
+            </button>
+          )}
           <button type="submit">Add task</button>
         </form>
 
         <div className="task-filters">
           <input
             type="search"
-            placeholder="Search titles..."
+            placeholder="Search tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -166,57 +212,105 @@ export default function TaskListPage() {
           {tasks.map((task) => (
             <li key={task.id} className="task-item">
               <div className="task-row">
-                <label className="task-main">
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => handleToggle(task)}
-                  />
-                  <span className={task.completed ? "done" : ""}>
-                    {task.title}
-                  </span>
-                </label>
-                <div className="task-actions">
-                  <select
-                    value={task.subject_id ?? ""}
-                    onChange={(e) =>
-                      handleSubjectChange(
-                        task,
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
-                    title={subjectName(task.subject_id)}
-                  >
-                    <option value="">No subject</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedTaskId(
-                        expandedTaskId === task.id ? null : task.id,
-                      )
-                    }
-                  >
-                    {expandedTaskId === task.id ? "Hide" : "Subtasks"}
-                  </button>
-                  <button type="button" onClick={() => handleRename(task)}>
-                    Rename
-                  </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => handleDelete(task)}
-                  >
-                    Delete
-                  </button>
-                </div>
+                {editingTaskId === task.id ? (
+                  <div className="task-main task-edit">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEdit(task);
+                        if (e.key === "Escape") cancelEdit();
+                      }}
+                    />
+                    <button type="button" onClick={() => saveEdit(task)}>
+                      Save
+                    </button>
+                    <button type="button" onClick={cancelEdit}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <label className="task-main">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => handleToggle(task)}
+                    />
+                    <span className={task.completed ? "done" : ""}>
+                      {task.title}
+                    </span>
+                  </label>
+                )}
+                {editingTaskId !== task.id &&
+                  (confirmingDeleteTaskId === task.id ? (
+                    <div className="task-actions confirm-delete">
+                      <span className="confirm-label">Delete this task?</span>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => handleDelete(task)}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDeleteTaskId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="task-actions">
+                      {hasSubjects ? (
+                        <select
+                          value={task.subject_id ?? ""}
+                          onChange={(e) =>
+                            handleSubjectChange(
+                              task,
+                              e.target.value ? Number(e.target.value) : null,
+                            )
+                          }
+                        >
+                          {sortedSubjects.map((subject) => (
+                            <option key={subject.id} value={subject.id}>
+                              {subject.name}
+                            </option>
+                          ))}
+                          <option value="">No subject</option>
+                        </select>
+                      ) : (
+                        <button type="button" onClick={focusSubjectInput}>
+                          Add subject
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedTaskId(
+                            expandedTaskId === task.id ? null : task.id,
+                          )
+                        }
+                      >
+                        {expandedTaskId === task.id ? "Hide" : "Subtasks"}
+                      </button>
+                      <button type="button" onClick={() => startEdit(task)}>
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => setConfirmingDeleteTaskId(task.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
               </div>
-              {expandedTaskId === task.id && <SubtaskList taskId={task.id} />}
+              {expandedTaskId === task.id && (
+                <SubtaskList taskId={task.id} parentCompleted={task.completed} />
+              )}
             </li>
           ))}
         </ul>

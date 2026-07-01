@@ -71,6 +71,9 @@ def update_task_by_id(
     task.title = update.title
     task.completed = update.completed
     task.subject_id = update.subject_id
+    if update.completed:
+        for subtask in task.subtasks:
+            subtask.completed = True
     session.commit()
     session.refresh(task)
     return task

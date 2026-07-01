@@ -64,13 +64,13 @@ function jsonRequest<T>(path: string, method: string, body: unknown): Promise<T>
 }
 
 export const api = {
-  register(email: string, password: string): Promise<User> {
-    return jsonRequest<User>("/auth/register", "POST", { email, password });
+  register(username: string, password: string): Promise<User> {
+    return jsonRequest<User>("/auth/register", "POST", { username, password });
   },
 
-  async login(email: string, password: string): Promise<Token> {
+  async login(username: string, password: string): Promise<Token> {
     const form = new URLSearchParams();
-    form.set("username", email);
+    form.set("username", username);
     form.set("password", password);
     const token = await request<Token>("/auth/login", {
       method: "POST",

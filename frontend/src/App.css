@@ -264,6 +264,23 @@ select {
   color: var(--muted);
 }
 
+.confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.confirm-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.icon-button.danger,
+.icon-button.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .task-empty,
 .subtask-empty {
   color: var(--muted);
@@ -274,7 +291,10 @@ select {
 .subtasks {
   margin-top: 0.8rem;
   padding-top: 0.8rem;
+  margin-left: 2rem;
+  padding-left: 1rem;
   border-top: 1px dashed var(--border);
+  border-left: 2px solid var(--border);
 }
 
 .subtasks ul {
@@ -290,12 +310,32 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .subtasks label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.subtask-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.subtask-edit,
+.task-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.subtask-edit input,
+.task-edit input {
+  flex: 1;
 }
 
 .subtask-form {

@@ -222,15 +222,17 @@ access token, and send it as an `Authorization: Bearer <token>` header on every
 task request. All `/tasks` endpoints are private: each user only sees and manages
 their own tasks (requests for another user's task return `404`).
 
+Usernames are unique and must be at least 3 characters.
+
 ```bash
 # 1. Register
 curl -X POST http://127.0.0.1:8000/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "student@example.com", "password": "password123"}'
+  -d '{"username": "student", "password": "password123"}'
 
-# 2. Log in (form-encoded; the OAuth2 "username" field carries the email)
+# 2. Log in (form-encoded; the OAuth2 "username" field carries the username)
 curl -X POST http://127.0.0.1:8000/auth/login \
-  -d "username=student@example.com&password=password123"
+  -d "username=student&password=password123"
 # -> { "access_token": "<JWT>", "token_type": "bearer" }
 
 # 3. Call a protected endpoint
@@ -238,16 +240,16 @@ curl http://127.0.0.1:8000/tasks \
   -H "Authorization: Bearer <JWT>"
 ```
 
-In Swagger UI (`/docs`) use the **Authorize** button and log in with the email as
-the username to try the protected endpoints interactively.
+In Swagger UI (`/docs`) use the **Authorize** button and log in with your
+username to try the protected endpoints interactively.
 
 ## API Endpoints
 
 | Method | Path               | Auth   | Description            | Request Body                         | Success Response          |
 |--------|--------------------|--------|------------------------|--------------------------------------|---------------------------|
 | GET    | `/`                | No     | Health check           | -                                    | `200` status message      |
-| POST   | `/auth/register`   | No     | Create an account      | `{ "email": "string", "password": "string" }` | `201` created user / `409` |
-| POST   | `/auth/login`      | No     | Obtain an access token | form: `username` (email), `password` | `200` token / `401`       |
+| POST   | `/auth/register`   | No     | Create an account      | `{ "username": "string", "password": "string" }` | `201` created user / `409` / `422` |
+| POST   | `/auth/login`      | No     | Obtain an access token | form: `username`, `password`         | `200` token / `401`       |
 | GET    | `/auth/me`         | Yes    | Current user           | -                                    | `200` user                |
 | POST   | `/subjects`        | Yes    | Create a subject       | `{ "name": "string" }`               | `201` created subject / `409` |
 | GET    | `/subjects`        | Yes    | List your subjects     | -                                    | `200` array of subjects   |
@@ -277,10 +279,12 @@ tasks remain and their `subject_id` is set to `null`. List a subject's tasks wit
 ### Subtasks
 
 A task can be broken into subtasks (e.g. "Outline", "Draft", "Proofread"), each
-with its own `completed` flag that is toggled independently and never changes the
-parent task's status. Subtasks live under nested routes
-`/tasks/{task_id}/subtasks` and are reached through the parent task, so they
-inherit its ownership (another user's task, or an unknown task, returns `404`).
+with its own `completed` flag. A subtask's completion never changes the parent
+task's status, but marking a task complete cascades down and completes all of its
+subtasks (un-completing the task leaves the subtasks as they are). Subtasks live
+under nested routes `/tasks/{task_id}/subtasks` and are reached through the parent
+task, so they inherit its ownership (another user's task, or an unknown task,
+returns `404`).
 
 ### Search & filtering
 

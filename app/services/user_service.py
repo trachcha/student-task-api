@@ -7,19 +7,19 @@ from app.models.user import User
 from app.schemas.user import UserCreate
 
 
-def get_user_by_email(session: Session, email: str) -> User | None:
-    return session.scalars(select(User).where(User.email == email)).first()
+def get_user_by_username(session: Session, username: str) -> User | None:
+    return session.scalars(select(User).where(User.username == username)).first()
 
 
 def create_user(session: Session, request: UserCreate) -> User:
-    if get_user_by_email(session, request.email) is not None:
+    if get_user_by_username(session, request.username) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+            detail="Username already registered",
         )
 
     user = User(
-        email=request.email,
+        username=request.username,
         hashed_password=hash_password(request.password),
     )
     session.add(user)
@@ -28,8 +28,8 @@ def create_user(session: Session, request: UserCreate) -> User:
     return user
 
 
-def authenticate_user(session: Session, email: str, password: str) -> User | None:
-    user = get_user_by_email(session, email)
+def authenticate_user(session: Session, username: str, password: str) -> User | None:
+    user = get_user_by_username(session, username)
     if user is None or not verify_password(password, user.hashed_password):
         return None
     return user

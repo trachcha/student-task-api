@@ -6,19 +6,19 @@ from tests.conftest import register_and_login
 def test_register_returns_user(client):
     response = client.post(
         "/auth/register",
-        json={"email": "new@example.com", "password": "password123"},
+        json={"username": "newuser", "password": "password123"},
     )
 
     assert response.status_code == status.HTTP_201_CREATED
     body = response.json()
     assert body["id"] == 1
-    assert body["email"] == "new@example.com"
+    assert body["username"] == "newuser"
     assert "password" not in body
     assert "hashed_password" not in body
 
 
-def test_register_duplicate_email_rejected(client):
-    payload = {"email": "dupe@example.com", "password": "password123"}
+def test_register_duplicate_username_rejected(client):
+    payload = {"username": "dupe", "password": "password123"}
     first = client.post("/auth/register", json=payload)
     assert first.status_code == status.HTTP_201_CREATED
 
@@ -26,10 +26,10 @@ def test_register_duplicate_email_rejected(client):
     assert second.status_code == status.HTTP_409_CONFLICT
 
 
-def test_register_invalid_email_rejected(client):
+def test_register_short_username_rejected(client):
     response = client.post(
         "/auth/register",
-        json={"email": "not-an-email", "password": "password123"},
+        json={"username": "ab", "password": "password123"},
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -38,12 +38,12 @@ def test_register_invalid_email_rejected(client):
 def test_login_success_returns_token(client):
     client.post(
         "/auth/register",
-        json={"email": "login@example.com", "password": "password123"},
+        json={"username": "loginuser", "password": "password123"},
     )
 
     response = client.post(
         "/auth/login",
-        data={"username": "login@example.com", "password": "password123"},
+        data={"username": "loginuser", "password": "password123"},
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -55,12 +55,12 @@ def test_login_success_returns_token(client):
 def test_login_wrong_password_rejected(client):
     client.post(
         "/auth/register",
-        json={"email": "login@example.com", "password": "password123"},
+        json={"username": "loginuser", "password": "password123"},
     )
 
     response = client.post(
         "/auth/login",
-        data={"username": "login@example.com", "password": "wrong"},
+        data={"username": "loginuser", "password": "wrong"},
     )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -69,21 +69,21 @@ def test_login_wrong_password_rejected(client):
 def test_login_unknown_user_rejected(client):
     response = client.post(
         "/auth/login",
-        data={"username": "ghost@example.com", "password": "password123"},
+        data={"username": "ghost", "password": "password123"},
     )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_me_returns_current_user(client):
-    token = register_and_login(client, "me@example.com", "password123")
+    token = register_and_login(client, "meuser", "password123")
 
     response = client.get(
         "/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["email"] == "me@example.com"
+    assert response.json()["username"] == "meuser"
 
 
 def test_me_requires_token(client):
@@ -101,8 +101,8 @@ def test_invalid_token_rejected(client):
 
 
 def test_tasks_are_isolated_per_user(client):
-    token_a = register_and_login(client, "alice@example.com", "password123")
-    token_b = register_and_login(client, "bob@example.com", "password123")
+    token_a = register_and_login(client, "alice", "password123")
+    token_b = register_and_login(client, "bob", "password123")
     headers_a = {"Authorization": f"Bearer {token_a}"}
     headers_b = {"Authorization": f"Bearer {token_b}"}
 

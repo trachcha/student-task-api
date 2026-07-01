@@ -9,7 +9,7 @@ export default function Layout() {
       <header className="app-header">
         <h1>Student Task Manager</h1>
         <div className="app-header-user">
-          <span>{user?.email}</span>
+          <span>{user?.username}</span>
           <button type="button" onClick={logout}>
             Log out
           </button>

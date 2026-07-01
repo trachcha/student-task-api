@@ -3,8 +3,8 @@ from fastapi import status
 from tests.conftest import register_and_login
 
 
-def _auth_headers(client, email: str) -> dict:
-    token = register_and_login(client, email, "password123")
+def _auth_headers(client, username: str) -> dict:
+    token = register_and_login(client, username, "password123")
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -111,8 +111,8 @@ def test_update_subject_same_name_allowed(auth_client):
 
 
 def test_same_name_allowed_for_different_users(client):
-    headers_a = _auth_headers(client, "alice@example.com")
-    headers_b = _auth_headers(client, "bob@example.com")
+    headers_a = _auth_headers(client, "alice")
+    headers_b = _auth_headers(client, "bob")
 
     first = client.post("/subjects", json={"name": "Math"}, headers=headers_a)
     second = client.post("/subjects", json={"name": "Math"}, headers=headers_b)
@@ -128,8 +128,8 @@ def test_subjects_require_authentication(client):
 
 
 def test_subjects_are_isolated_per_user(client):
-    headers_a = _auth_headers(client, "alice@example.com")
-    headers_b = _auth_headers(client, "bob@example.com")
+    headers_a = _auth_headers(client, "alice")
+    headers_b = _auth_headers(client, "bob")
 
     created = client.post(
         "/subjects", json={"name": "Math"}, headers=headers_a
