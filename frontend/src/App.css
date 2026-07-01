@@ -1,0 +1,308 @@
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --border: #e0e3e8;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --primary: #3b6cf6;
+  --danger: #e5484d;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  border-color: var(--primary);
+}
+
+button.danger,
+button.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+input,
+select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.centered,
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Auth */
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+}
+
+.auth-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+}
+
+.auth-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.auth-card button[type="submit"] {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  padding: 0.55rem;
+  font-weight: 600;
+}
+
+.auth-switch {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* App shell */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-header h1 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.app-header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.app-main {
+  padding: 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Task layout */
+.task-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.subject-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.subject-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 0.7rem;
+}
+
+.subject-list {
+  list-style: none;
+  margin: 0 0 0.8rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.subject-list li {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.subject-list li button:first-child {
+  flex: 1;
+  text-align: left;
+}
+
+.subject-list button.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.subject-form {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.subject-form input {
+  width: 100%;
+}
+
+.icon-button {
+  padding: 0.3rem 0.5rem;
+  color: var(--muted);
+}
+
+/* Task content */
+.task-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.task-create,
+.task-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.task-create input[type="text"],
+.task-filters input {
+  flex: 1;
+}
+
+.task-create button {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.task-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.task-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.task-empty,
+.subtask-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Subtasks */
+.subtasks {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--border);
+}
+
+.subtasks ul {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.subtasks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.subtasks label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subtask-form {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.subtask-form input {
+  flex: 1;
+}

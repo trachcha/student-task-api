@@ -1,5 +1,7 @@
 # Student Task API
 
+[![CI](https://github.com/trachcha/student-task-api/actions/workflows/ci.yml/badge.svg)](https://github.com/trachcha/student-task-api/actions/workflows/ci.yml)
+
 A simple task-management REST API built with FastAPI and PostgreSQL, created to learn backend fundamentals and professional software engineering practices.
 
 The project follows a layered architecture where HTTP routes delegate to a service layer, which is the single point of access to the database. Tasks are owned by authenticated users.
@@ -64,7 +66,19 @@ student-task-api/
 │   ├── test_subjects.py       # Subject endpoint tests
 │   ├── test_subtasks.py       # Subtask endpoint tests
 │   └── test_tasks.py          # Task endpoint tests
-├── docker-compose.yml         # Local PostgreSQL service
+├── frontend/                  # React + Vite + TypeScript SPA
+│   └── src/
+│       ├── api/               # Typed fetch client + shared types
+│       ├── auth/              # Auth context, login/register pages
+│       ├── components/        # Layout, protected route
+│       ├── subjects/          # Subject sidebar
+│       ├── subtasks/          # Subtask list
+│       └── tasks/             # Task list, filters, create form
+├── .github/workflows/ci.yml   # GitHub Actions: pytest on push/PR
+├── Dockerfile                 # API image
+├── docker-entrypoint.sh       # Runs migrations, then uvicorn
+├── docker-compose.yml         # API + PostgreSQL services
+├── render.yaml                # Render blueprint (API, DB, frontend)
 ├── .env.example
 ├── pytest.ini
 ├── requirements.txt
@@ -156,6 +170,30 @@ To stop the stack (the database volume is preserved):
 docker compose down
 ```
 
+### Deploying to Render
+
+The repository ships a [render.yaml](render.yaml) blueprint that provisions the
+API as a Docker web service alongside a managed PostgreSQL database.
+
+1. Push the repository to GitHub.
+2. In the [Render dashboard](https://dashboard.render.com/), choose **New +** ->
+   **Blueprint** and select this repository. Render reads `render.yaml` and
+   creates the `student-task-api` web service and the `student-task-db` database.
+3. Render injects `DATABASE_URL` from the database and auto-generates a strong
+   `SECRET_KEY`. Alembic migrations run automatically on each deploy via the
+   container entrypoint.
+
+After the first deploy, smoke-test the live URL:
+
+- `GET https://<your-service>.onrender.com/` returns the health message.
+- `https://<your-service>.onrender.com/docs` loads Swagger UI.
+- Register -> login -> create a task works end to end.
+
+Notes for the free tier: the web service sleeps after inactivity (expect a slow
+first request while it wakes), and free databases are removed after their trial
+window, so treat this as a demo environment rather than durable storage. Once a
+frontend is deployed, add its URL to `CORS_ORIGINS` on the web service.
+
 ### Configuration
 
 Configuration is read from environment variables (a local `.env` file is loaded
@@ -168,6 +206,7 @@ automatically). See [.env.example](.env.example).
 | `SECRET_KEY`        | `dev-secret-change-me`                                         | Secret used to sign JWTs. Override in every real environment. |
 | `ALGORITHM`         | `HS256`                                                       | JWT signing algorithm.                            |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30`                                               | Access token lifetime in minutes.                 |
+| `CORS_ORIGINS`      | `http://localhost:5173`                                       | Comma-separated browser origins allowed to call the API. |
 
 ### Interactive Documentation
 
@@ -371,6 +410,46 @@ pytest -v
 pytest tests/test_tasks.py::test_create_task
 ```
 
+### Continuous Integration
+
+Every push and pull request to `main` runs the full test suite on GitHub
+Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)). The workflow
+spins up a PostgreSQL 16 service, creates the `student_tasks_test` database, and
+runs `pytest` against it, so regressions are caught before they merge.
+
+## Frontend
+
+A single-page web client lives in [frontend/](frontend/), built with React,
+Vite, and TypeScript. It exercises the full API: register and log in, create and
+filter tasks (by completion, title search, and subject), manage subjects, and
+expand a task to manage its subtasks. The JWT is stored in the browser and sent
+as a bearer token on every request.
+
+Local development (the API must be running, e.g. `docker compose up -d db` plus
+`uvicorn app.main:app --reload`, or the full `docker compose up`):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The app runs on `http://localhost:5173` and talks to the API at the URL in
+`VITE_API_URL` (see [frontend/.env.example](frontend/.env.example); defaults to
+`http://localhost:8000`). That origin is already in the API's default
+`CORS_ORIGINS`, so no extra setup is needed for local development.
+
+To build for production:
+
+```bash
+cd frontend
+npm run build   # outputs static assets to frontend/dist
+```
+
+The [render.yaml](render.yaml) blueprint also provisions the frontend as a Render
+static site. After it deploys, add its URL to the API's `CORS_ORIGINS` and set
+the frontend's `VITE_API_URL` to the deployed API URL.
+
 ## Roadmap
 
 - [x] CRUD operations with in-memory storage
@@ -385,7 +464,8 @@ pytest tests/test_tasks.py::test_create_task
 - [x] Subtasks under tasks (nested, independently completable)
 - [x] Search & filtering on tasks (`completed`, `q`, combinable)
 - [x] Containerization (Dockerfile + Compose stack, migrations on startup)
-- [ ] Cloud deployment
+- [x] Cloud deployment (Render blueprint: Docker web service + managed Postgres)
+- [x] Web frontend (React + Vite SPA)
 
 ## Contributing
 

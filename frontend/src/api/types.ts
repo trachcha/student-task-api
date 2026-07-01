@@ -1,0 +1,34 @@
+export interface User {
+  id: number;
+  email: string;
+}
+
+export interface Token {
+  access_token: string;
+  token_type: string;
+}
+
+export interface Subject {
+  id: number;
+  name: string;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  completed: boolean;
+  subject_id: number | null;
+}
+
+export interface Subtask {
+  id: number;
+  title: string;
+  completed: boolean;
+  task_id: number;
+}
+
+export interface TaskFilters {
+  completed?: boolean;
+  q?: string;
+  subject_id?: number;
+}
