@@ -173,26 +173,26 @@ docker compose down
 ### Deploying to Render
 
 The repository ships a [render.yaml](render.yaml) blueprint that provisions the
-API as a Docker web service alongside a managed PostgreSQL database.
+API (Docker), frontend (static site), and managed PostgreSQL database. The
+blueprint wires `VITE_API_URL` and `CORS_ORIGINS` automatically from each
+service's public Render URL (`RENDER_EXTERNAL_URL`).
 
 1. Push the repository to GitHub.
 2. In the [Render dashboard](https://dashboard.render.com/), choose **New +** ->
-   **Blueprint** and select this repository. Render reads `render.yaml` and
-   creates the `student-task-api` web service and the `student-task-db` database.
-3. Render injects `DATABASE_URL` from the database and auto-generates a strong
-   `SECRET_KEY`. Alembic migrations run automatically on each deploy via the
-   container entrypoint.
+   **Blueprint** and select this repository.
+3. After deploy, open the **frontend** service URL (not the API URL) for login.
+4. If you change service URLs or env vars, **Manual Deploy** both the frontend
+   (build embeds `VITE_API_URL`) and the API (reads `CORS_ORIGINS` at runtime).
 
-After the first deploy, smoke-test the live URL:
+After the first deploy, smoke-test:
 
-- `GET https://<your-service>.onrender.com/` returns the health message.
-- `https://<your-service>.onrender.com/docs` loads Swagger UI.
+- API `GET https://<api-service>.onrender.com/` returns the health JSON message.
+- Frontend `https://<frontend-service>.onrender.com/login` loads the sign-in page.
 - Register -> login -> create a task works end to end.
 
-Notes for the free tier: the web service sleeps after inactivity (expect a slow
-first request while it wakes), and free databases are removed after their trial
-window, so treat this as a demo environment rather than durable storage. Once a
-frontend is deployed, add its URL to `CORS_ORIGINS` on the web service.
+Notes for the free tier: services sleep after inactivity (expect a slow first
+request while they wake), and free databases are removed after their trial
+window, so treat this as a demo environment rather than durable storage.
 
 ### Configuration
 

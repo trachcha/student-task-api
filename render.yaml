@@ -18,7 +18,10 @@ services:
       - key: APP_ENV
         value: production
       - key: CORS_ORIGINS
-        value: "https://student-task-frontend.onrender.com"
+        fromService:
+          type: web
+          name: student-task-frontend
+          envVarKey: RENDER_EXTERNAL_URL
 
   - type: web
     name: student-task-frontend
@@ -27,7 +30,10 @@ services:
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://student-task-api.onrender.com
+        fromService:
+          type: web
+          name: student-task-api
+          envVarKey: RENDER_EXTERNAL_URL
     routes:
       - type: rewrite
         source: /*
